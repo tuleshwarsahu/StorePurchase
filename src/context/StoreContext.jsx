@@ -32,8 +32,7 @@ export const StoreProvider = ({ children }) => {
         console.error('Error parsing stored user session:', e);
       }
     }
-    // Default to Pawan Tiwari (Admin) if no session saved yet so app opens cleanly or requires login
-    return SEED_USERS[0];
+    return null; // Require explicit login on fresh sessions/devices!
   });
 
   // Login handler with GAS API & local seed fallback
