@@ -15,7 +15,7 @@ export const StoreProvider = ({ children }) => {
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
   const [toasts, setToasts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Seed fallback users matching Google Sheet 'Login Credentials'
   const SEED_USERS = [
     { employeeId: '1', name: 'Pawan Tiwari', username: 'pawan', password: '3313', role: 'admin', pageAccess: 'ALL', avatar: 'PT' },

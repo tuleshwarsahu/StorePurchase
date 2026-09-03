@@ -143,31 +143,6 @@ export const LoginPage = ({ onLoginSuccess }) => {
               )}
             </button>
           </form>
-
-          {/* Quick Preset Credentials Panel */}
-          <div className="pt-4 border-t border-slate-800/80 space-y-2.5">
-            <p className="text-[11px] font-semibold text-slate-400 flex items-center gap-1.5 justify-center">
-              <KeyRound className="w-3.5 h-3.5 text-teal-400" /> Demo Quick Logins (Click to Auto-Fill)
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('pawan', 'pawan123')}
-                className="p-2 rounded-xl bg-slate-950/50 border border-slate-800 hover:border-teal-500/50 text-left transition-all group"
-              >
-                <p className="text-[11px] font-bold text-teal-400 group-hover:text-teal-300">Admin User</p>
-                <p className="text-[10px] text-slate-400">pawan / pawan123</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('akash', 'akash123')}
-                className="p-2 rounded-xl bg-slate-950/50 border border-slate-800 hover:border-indigo-500/50 text-left transition-all group"
-              >
-                <p className="text-[11px] font-bold text-indigo-400 group-hover:text-indigo-300">Standard User</p>
-                <p className="text-[10px] text-slate-400">akash / akash123</p>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
