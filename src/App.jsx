@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Routes, Route, Navigate, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { StoreProvider, useStore } from './context/StoreContext';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
@@ -21,57 +22,61 @@ import { AnalyticsPage } from './pages/AnalyticsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { LoginPage } from './pages/LoginPage';
 
-function AppContent() {
-  const { currentUser, selectProcess, hasPageAccess } = useStore();
+// Helper map for legacy page IDs to URL paths
+const routeMap = {
+  dashboard: '/',
+  'create-indent': '/create-indent',
+  'all-indents': '/all-indents',
+  'pending-processes': '/pending-processes',
+  'vendor-management': '/vendor-management',
+  'regular-vendor': '/regular-vendor',
+  'need-more-vendor': '/need-more-vendor',
+  'approval-queue': '/approval-queue',
+  'generate-po': '/generate-po',
+  'store-in': '/store-in',
+  'store-out': '/store-out',
+  'history': '/history',
+  'analytics': '/analytics',
+  'settings': '/settings',
+  'select-process': '/select-process',
+  'indent-detail': '/indent-detail'
+};
 
-  // Persist current active tab across browser refreshes
-  const [activeTab, setActiveTab] = useState(() => {
-    const saved = localStorage.getItem('store_purchase_active_tab');
-    return saved || 'dashboard';
-  });
+// Route Security Guard Component (Redirects to /login if unauthenticated)
+function ProtectedRoute({ pageId, children }) {
+  const { currentUser, hasPageAccess } = useStore();
+  const location = useLocation();
+
+  if (!currentUser) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (pageId && !hasPageAccess(pageId)) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+}
+
+// Main App Layout Wrapper with Header and Sidebar
+function AppLayout() {
+  const { selectProcess } = useStore();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [selectedIndentForDetail, setSelectedIndentForDetail] = useState(null);
   const [selectedIndentForProcess, setSelectedIndentForProcess] = useState(null);
   const [initialVendorItem, setInitialVendorItem] = useState(null);
 
-  // Sync activeTab to localStorage
-  React.useEffect(() => {
-    if (activeTab) {
-      localStorage.setItem('store_purchase_active_tab', activeTab);
-    }
-  }, [activeTab]);
-
-  // Auto-redirect to first accessible page if current activeTab is not allowed for user
-  React.useEffect(() => {
-    if (currentUser) {
-      if (!hasPageAccess(activeTab)) {
-        const allTabs = [
-          'dashboard', 'create-indent', 'all-indents', 'pending-processes',
-          'vendor-management', 'approval-queue', 'generate-po', 'store-in',
-          'store-out', 'settings'
-        ];
-        const firstAllowed = allTabs.find((t) => hasPageAccess(t));
-        if (firstAllowed) {
-          setActiveTab(firstAllowed);
-          localStorage.setItem('store_purchase_active_tab', firstAllowed);
-        }
-      }
-    }
-  }, [currentUser, activeTab, hasPageAccess]);
-
-  if (!currentUser) {
-    return <LoginPage />;
-  }
-
   const handleNavigate = (tabId) => {
-    setActiveTab(tabId);
-    localStorage.setItem('store_purchase_active_tab', tabId);
+    const targetRoute = routeMap[tabId] || (tabId.startsWith('/') ? tabId : `/${tabId}`);
     setInitialVendorItem(null);
+    navigate(targetRoute);
   };
 
-  const handleIndentCreated = (indentRecord) => {
-    setActiveTab('all-indents');
+  const handleIndentCreated = () => {
+    navigate('/all-indents');
   };
 
   const handleSelectProcess = (indent, processTypePayload) => {
@@ -91,48 +96,48 @@ function AppContent() {
 
     const baseObj = typeof indent === 'object' ? indent : { id: indentId };
     setInitialVendorItem({ ...baseObj, processType: processTypeStr, processTypeSelected: true });
-    setActiveTab('vendor-management');
+    navigate('/vendor-management');
   };
 
   const handleViewIndentDetail = (indent) => {
     setSelectedIndentForDetail(indent);
-    setActiveTab('indent-detail');
+    navigate('/indent-detail');
   };
 
   const handleProcessItem = (indent) => {
     setSelectedIndentForProcess(indent);
-    setActiveTab('select-process');
+    navigate('/select-process');
   };
 
   const handleGlobalSearchSelect = (indent) => {
     setSelectedIndentForDetail(indent);
-    setActiveTab('indent-detail');
+    navigate('/indent-detail');
   };
 
-  const pageTitleMap = {
-    dashboard: 'Procurement Dashboard',
-    'create-indent': 'Create New Indent',
-    'select-process': 'Process Selection Form',
-    'all-indents': 'All Purchase Indents',
-    'pending-processes': 'Pending Processes Queue',
-    'vendor-management': 'Vendor Management & Quotation Workspace',
-    'regular-vendor': 'Vendor Management (Regular Vendor)',
-    'need-more-vendor': 'Vendor Management (Multi-Bids)',
-    'approval-queue': 'Approval Queue & History',
-    'generate-po': 'Generate Purchase Order (PO)',
-    history: 'Purchase History Log',
-    analytics: 'Procurement Analytics',
-    users: 'User Access Management',
-    settings: 'System & Workflow Settings',
-    'indent-detail': `Indent Details (${selectedIndentForDetail?.id || ''})`
+  const getPageTitle = (path) => {
+    if (path === '/' || path === '/dashboard') return 'Procurement Dashboard';
+    if (path === '/create-indent') return 'Create New Indent';
+    if (path === '/select-process') return 'Process Selection Form';
+    if (path === '/all-indents') return 'All Purchase Indents';
+    if (path === '/pending-processes') return 'Pending Processes Queue';
+    if (path === '/vendor-management') return 'Vendor Management & Quotation Workspace';
+    if (path === '/regular-vendor') return 'Vendor Management (Regular Vendor)';
+    if (path === '/need-more-vendor') return 'Vendor Management (Multi-Bids)';
+    if (path === '/approval-queue') return 'Approval Queue & History';
+    if (path === '/generate-po') return 'Generate Purchase Order (PO)';
+    if (path === '/store-in') return 'Store Receiving (Store In)';
+    if (path === '/store-out') return 'Store Issue (Store Out)';
+    if (path === '/history') return 'Purchase History Log';
+    if (path === '/analytics') return 'Procurement Analytics';
+    if (path === '/settings') return 'User & System Settings';
+    if (path === '/indent-detail') return `Indent Details (${selectedIndentForDetail?.id || ''})`;
+    return 'Purchase Indent System';
   };
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden font-sans text-slate-900">
-      {/* Sidebar */}
+      {/* Sidebar Navigation */}
       <Sidebar
-        activeTab={activeTab}
-        setActiveTab={handleNavigate}
         isMobileOpen={isMobileSidebarOpen}
         setIsMobileOpen={setIsMobileSidebarOpen}
       />
@@ -141,8 +146,7 @@ function AppContent() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header */}
         <Header
-          pageTitle={pageTitleMap[activeTab] || 'Purchase Indent System'}
-          activeTab={activeTab}
+          pageTitle={getPageTitle(location.pathname)}
           onGlobalSearchSelect={handleGlobalSearchSelect}
           isMobileOpen={isMobileSidebarOpen}
           setIsMobileOpen={setIsMobileSidebarOpen}
@@ -150,63 +154,16 @@ function AppContent() {
 
         {/* Viewport Content Container */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
-          {activeTab === 'dashboard' && (
-            <DashboardPage onNavigate={handleNavigate} onViewIndentDetail={handleViewIndentDetail} />
-          )}
-
-          {activeTab === 'create-indent' && (
-            <CreateIndentPage onNavigate={handleNavigate} onIndentCreated={handleIndentCreated} />
-          )}
-
-          {activeTab === 'select-process' && (
-            <ProcessSelectionPage
-              indent={selectedIndentForProcess}
-              onSelectProcess={handleSelectProcess}
-              onNavigate={handleNavigate}
-            />
-          )}
-
-          {activeTab === 'all-indents' && (
-            <AllIndentsPage onNavigate={handleNavigate} onViewIndentDetail={handleViewIndentDetail} />
-          )}
-
-          {activeTab === 'indent-detail' && (
-            <IndentDetailPage
-              indent={selectedIndentForDetail}
-              onBack={() => handleNavigate('all-indents')}
-              onNavigate={handleNavigate}
-            />
-          )}
-
-          {activeTab === 'pending-processes' && (
-            <PendingProcessesPage onNavigate={handleNavigate} onProcessItem={handleProcessItem} />
-          )}
-
-          {activeTab === 'vendor-management' && (
-            <VendorManagementPage initialOpenItem={initialVendorItem} defaultCategory="All" />
-          )}
-
-          {activeTab === 'regular-vendor' && (
-            <VendorManagementPage initialOpenItem={initialVendorItem} defaultCategory="Regular Vendor" />
-          )}
-
-          {activeTab === 'need-more-vendor' && (
-            <VendorManagementPage initialOpenItem={initialVendorItem} defaultCategory="Need More Vendor" />
-          )}
-
-          {activeTab === 'approval-queue' && <ApprovalQueuePage />}
-
-          {activeTab === 'generate-po' && <GeneratePOPage />}
-
-          {activeTab === 'store-in' && <StoreInPage />}
-
-          {activeTab === 'store-out' && <StoreOutPage />}
-
-          {activeTab === 'history' && <HistoryPage onViewIndentDetail={handleViewIndentDetail} />}
-
-          {activeTab === 'analytics' && <AnalyticsPage />}
-
-          {activeTab === 'settings' && <SettingsPage />}
+          <Outlet context={{
+            handleNavigate,
+            handleIndentCreated,
+            handleSelectProcess,
+            handleViewIndentDetail,
+            handleProcessItem,
+            selectedIndentForDetail,
+            selectedIndentForProcess,
+            initialVendorItem
+          }} />
         </main>
       </div>
 
@@ -216,10 +173,223 @@ function AppContent() {
   );
 }
 
+function AppRoutes() {
+  return (
+    <Routes>
+      {/* Public Login Route */}
+      <Route path="/login" element={<LoginPage />} />
+
+      {/* Protected Routes Wrapper */}
+      <Route
+        element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute pageId="dashboard">
+              <DashboardRoute />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute pageId="dashboard">
+              <DashboardRoute />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/create-indent"
+          element={
+            <ProtectedRoute pageId="create-indent">
+              <CreateIndentRoute />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/all-indents"
+          element={
+            <ProtectedRoute pageId="all-indents">
+              <AllIndentsRoute />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/indent-detail"
+          element={
+            <ProtectedRoute pageId="all-indents">
+              <IndentDetailRoute />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/pending-processes"
+          element={
+            <ProtectedRoute pageId="pending-processes">
+              <PendingProcessesRoute />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/select-process"
+          element={
+            <ProtectedRoute pageId="pending-processes">
+              <ProcessSelectionRoute />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/vendor-management"
+          element={
+            <ProtectedRoute pageId="vendor-management">
+              <VendorManagementRoute defaultCategory="All" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/regular-vendor"
+          element={
+            <ProtectedRoute pageId="vendor-management">
+              <VendorManagementRoute defaultCategory="Regular Vendor" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/need-more-vendor"
+          element={
+            <ProtectedRoute pageId="vendor-management">
+              <VendorManagementRoute defaultCategory="Need More Vendor" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/approval-queue"
+          element={
+            <ProtectedRoute pageId="approval-queue">
+              <ApprovalQueuePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/generate-po"
+          element={
+            <ProtectedRoute pageId="generate-po">
+              <GeneratePOPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/store-in"
+          element={
+            <ProtectedRoute pageId="store-in">
+              <StoreInPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/store-out"
+          element={
+            <ProtectedRoute pageId="store-out">
+              <StoreOutPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/history"
+          element={
+            <ProtectedRoute pageId="all-indents">
+              <HistoryRoute />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/analytics"
+          element={
+            <ProtectedRoute pageId="dashboard">
+              <AnalyticsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute pageId="settings">
+              <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Catch-all route -> Redirect to Home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
+  );
+}
+
+// Route Helper Wrappers using Outlet context
+import { useOutletContext } from 'react-router-dom';
+
+function DashboardRoute() {
+  const { handleNavigate, handleViewIndentDetail } = useOutletContext();
+  return <DashboardPage onNavigate={handleNavigate} onViewIndentDetail={handleViewIndentDetail} />;
+}
+
+function CreateIndentRoute() {
+  const { handleNavigate, handleIndentCreated } = useOutletContext();
+  return <CreateIndentPage onNavigate={handleNavigate} onIndentCreated={handleIndentCreated} />;
+}
+
+function AllIndentsRoute() {
+  const { handleNavigate, handleViewIndentDetail } = useOutletContext();
+  return <AllIndentsPage onNavigate={handleNavigate} onViewIndentDetail={handleViewIndentDetail} />;
+}
+
+function IndentDetailRoute() {
+  const { selectedIndentForDetail, handleNavigate } = useOutletContext();
+  return (
+    <IndentDetailPage
+      indent={selectedIndentForDetail}
+      onBack={() => handleNavigate('all-indents')}
+      onNavigate={handleNavigate}
+    />
+  );
+}
+
+function PendingProcessesRoute() {
+  const { handleNavigate, handleProcessItem } = useOutletContext();
+  return <PendingProcessesPage onNavigate={handleNavigate} onProcessItem={handleProcessItem} />;
+}
+
+function ProcessSelectionRoute() {
+  const { selectedIndentForProcess, handleSelectProcess, handleNavigate } = useOutletContext();
+  return (
+    <ProcessSelectionPage
+      indent={selectedIndentForProcess}
+      onSelectProcess={handleSelectProcess}
+      onNavigate={handleNavigate}
+    />
+  );
+}
+
+function VendorManagementRoute({ defaultCategory }) {
+  const { initialVendorItem } = useOutletContext();
+  return <VendorManagementPage initialOpenItem={initialVendorItem} defaultCategory={defaultCategory} />;
+}
+
+function HistoryRoute() {
+  const { handleViewIndentDetail } = useOutletContext();
+  return <HistoryPage onViewIndentDetail={handleViewIndentDetail} />;
+}
+
 export default function App() {
   return (
     <StoreProvider>
-      <AppContent />
+      <AppRoutes />
     </StoreProvider>
   );
 }

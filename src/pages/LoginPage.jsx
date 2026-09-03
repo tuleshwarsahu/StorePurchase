@@ -1,9 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ShieldCheck, User, Lock, Eye, EyeOff, LogIn, Sparkles, CheckCircle2, ShieldAlert, KeyRound } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 
 export const LoginPage = ({ onLoginSuccess }) => {
-  const { loginUser } = useStore();
+  const { currentUser, loginUser } = useStore();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const from = location.state?.from?.pathname || '/';
+
+  // Auto-redirect if user is already logged in
+  useEffect(() => {
+    if (currentUser) {
+      navigate(from, { replace: true });
+    }
+  }, [currentUser, navigate, from]);
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -25,6 +37,7 @@ export const LoginPage = ({ onLoginSuccess }) => {
       const result = await loginUser(username, password);
       if (result && result.success) {
         if (onLoginSuccess) onLoginSuccess(result.user);
+        navigate(from, { replace: true });
       } else {
         setErrorMessage(result?.message || 'Invalid Username or Password.');
       }
@@ -102,13 +115,13 @@ export const LoginPage = ({ onLoginSuccess }) => {
                     setPassword(e.target.value);
                     setErrorMessage('');
                   }}
-                  placeholder="Enter your password (e.g. 3313)"
-                  className="w-full pl-10 pr-11 py-3 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition-all"
+                  placeholder="Enter your password"
+                  className="w-full pl-10 pr-10 py-3 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-300 transition-colors"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-300"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -118,23 +131,44 @@ export const LoginPage = ({ onLoginSuccess }) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 px-4 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-teal-500/20 flex items-center justify-center gap-2 transition-all active:scale-[0.99] disabled:opacity-50"
+              className="w-full py-3.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-teal-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {loading ? (
                 <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  <LogIn className="w-4 h-4" /> Sign In to Portal
+                  <LogIn className="w-4 h-4" />
+                  Sign In to Portal
                 </>
               )}
             </button>
           </form>
-        </div>
 
-        {/* Footer info */}
-        <p className="text-center text-[11px] text-slate-500">
-          Powered by Google Apps Script & Role-Based Security Controls
-        </p>
+          {/* Quick Preset Credentials Panel */}
+          <div className="pt-4 border-t border-slate-800/80 space-y-2.5">
+            <p className="text-[11px] font-semibold text-slate-400 flex items-center gap-1.5 justify-center">
+              <KeyRound className="w-3.5 h-3.5 text-teal-400" /> Demo Quick Logins (Click to Auto-Fill)
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('pawan', 'pawan123')}
+                className="p-2 rounded-xl bg-slate-950/50 border border-slate-800 hover:border-teal-500/50 text-left transition-all group"
+              >
+                <p className="text-[11px] font-bold text-teal-400 group-hover:text-teal-300">Admin User</p>
+                <p className="text-[10px] text-slate-400">pawan / pawan123</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('akash', 'akash123')}
+                className="p-2 rounded-xl bg-slate-950/50 border border-slate-800 hover:border-indigo-500/50 text-left transition-all group"
+              >
+                <p className="text-[11px] font-bold text-indigo-400 group-hover:text-indigo-300">Standard User</p>
+                <p className="text-[10px] text-slate-400">akash / akash123</p>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

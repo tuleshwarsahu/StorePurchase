@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   FilePlus,
@@ -17,30 +18,54 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 
-export const Sidebar = ({ activeTab, setActiveTab, isMobileOpen, setIsMobileOpen }) => {
+const getActiveTabFromPath = (pathname) => {
+  if (pathname === '/' || pathname === '/dashboard') return 'dashboard';
+  if (pathname.startsWith('/indent/')) return 'all-indents';
+  if (pathname === '/create-indent') return 'create-indent';
+  if (pathname === '/all-indents') return 'all-indents';
+  if (pathname === '/pending-processes') return 'pending-processes';
+  if (pathname === '/vendor-management' || pathname === '/regular-vendor' || pathname === '/need-more-vendor') return 'vendor-management';
+  if (pathname === '/approval-queue') return 'approval-queue';
+  if (pathname === '/generate-po') return 'generate-po';
+  if (pathname === '/store-in') return 'store-in';
+  if (pathname === '/store-out') return 'store-out';
+  if (pathname === '/settings') return 'settings';
+  return 'dashboard';
+};
+
+export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
   const { currentUser, logoutUser, hasPageAccess } = useStore();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const activeTab = getActiveTabFromPath(location.pathname);
 
   const allMenuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'create-indent', label: 'Create Indent', icon: FilePlus },
-    { id: 'all-indents', label: 'All Indents', icon: Boxes },
-    { id: 'pending-processes', label: 'Pending Processes', icon: Clock },
-    { id: 'vendor-management', label: 'Vendor Workspace', icon: Store },
-    { id: 'approval-queue', label: 'Approval Queue', icon: CheckSquare },
-    { id: 'generate-po', label: 'Generate PO', icon: FileText },
-    { id: 'store-in', label: 'Store In', icon: PackageCheck },
-    { id: 'store-out', label: 'Store Out', icon: PackageMinus },
-    { id: 'settings', label: 'User & System Settings', icon: Settings }
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/' },
+    { id: 'create-indent', label: 'Create Indent', icon: FilePlus, path: '/create-indent' },
+    { id: 'all-indents', label: 'All Indents', icon: Boxes, path: '/all-indents' },
+    { id: 'pending-processes', label: 'Pending Processes', icon: Clock, path: '/pending-processes' },
+    { id: 'vendor-management', label: 'Vendor Workspace', icon: Store, path: '/vendor-management' },
+    { id: 'approval-queue', label: 'Approval Queue', icon: CheckSquare, path: '/approval-queue' },
+    { id: 'generate-po', label: 'Generate PO', icon: FileText, path: '/generate-po' },
+    { id: 'store-in', label: 'Store In', icon: PackageCheck, path: '/store-in' },
+    { id: 'store-out', label: 'Store Out', icon: PackageMinus, path: '/store-out' },
+    { id: 'settings', label: 'User & System Settings', icon: Settings, path: '/settings' }
   ];
 
   // Filter menu items dynamically by user permissions
   const visibleMenuItems = allMenuItems.filter((item) => hasPageAccess(item.id));
 
-  const handleNavClick = (tabId) => {
-    setActiveTab(tabId);
+  const handleNavClick = (item) => {
+    navigate(item.path);
     if (setIsMobileOpen) {
       setIsMobileOpen(false); // Close mobile drawer automatically when clicking a link
     }
+  };
+
+  const handleLogout = () => {
+    logoutUser();
+    navigate('/login');
   };
 
   return (
@@ -91,7 +116,7 @@ export const Sidebar = ({ activeTab, setActiveTab, isMobileOpen, setIsMobileOpen
             return (
               <button
                 key={item.id}
-                onClick={() => handleNavClick(item.id)}
+                onClick={() => handleNavClick(item)}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-all ${
                   isActive
                     ? 'bg-slate-800 text-white shadow-xs border-l-3 border-teal-400 pl-2.5 font-bold'
@@ -122,7 +147,7 @@ export const Sidebar = ({ activeTab, setActiveTab, isMobileOpen, setIsMobileOpen
                 </div>
               </div>
               <button
-                onClick={logoutUser}
+                onClick={handleLogout}
                 title="Logout Session"
                 className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded transition-colors shrink-0"
               >
